@@ -15,6 +15,7 @@ const uploadOnCloudinary = async (localFilePath) => {
       resource_type: "auto",
       folder: "yt_backend",
     });
+    fs.unlinkSync(localFilePath);
     return response;
   } catch (error) {
     // removing localfile as the upload operation got failed
