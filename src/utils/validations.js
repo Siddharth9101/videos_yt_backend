@@ -16,3 +16,12 @@ export const validateRegisterBody = (fullname, username, email, password) => {
     throw new ApiError(400, "Password must be at least 6 characters");
   }
 };
+
+export const validateLoginBody = (username, email, password) => {
+  if (!username && !email) {
+    throw new ApiError(400, "Email or username is required");
+  }
+  if (!password || password === "") {
+    throw new ApiError(400, "Password is required");
+  }
+};
