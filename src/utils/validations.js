@@ -30,16 +30,13 @@ export const validateChangePasswordBody = (oldPassword, newPassword) => {
   if (!oldPassword || !newPassword) {
     throw new ApiError(400, "old password and new password is required");
   }
-  if (oldPassword === "" || newPassword === "") {
-    throw new ApiError(400, "old password and new password is required");
-  }
   if (oldPassword?.length < 6 || newPassword?.length < 6) {
     throw new ApiError(400, "Password length must be atleast 6");
   }
 };
 
 export const validateUpdateUserBody = (email, fullname) => {
-  if (!email || !fullname || email === "" || fullname === "") {
+  if (!email || !fullname) {
     throw new ApiError(400, "email and password are required");
   }
 
