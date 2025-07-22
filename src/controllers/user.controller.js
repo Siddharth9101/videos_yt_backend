@@ -4,9 +4,14 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import {
   validateRegisterBody,
   validateLoginBody,
+  validateChangePasswordBody,
+  validateUpdateUserBody,
 } from "../utils/validations.js";
 import { User } from "../models/user.model.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+  deleteFromCloudinary,
+  uploadOnCloudinary,
+} from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
 
 const generateAccessAndRefreshTokens = async (userId) => {
@@ -70,8 +75,10 @@ const registerUser = asyncHandler(async (req, res) => {
 
   const user = await User.create({
     fullname,
-    avatar: avatar.url,
-    coverImage: coverImage.url || "",
+    avatar: avatar.secure_url,
+    avatarPublicId: avatar.public_id,
+    coverImage: coverImage.secure_url || "",
+    coverImagePublicId: coverImage.public_id || "",
     email,
     password,
     username: username.toLowerCase(),
@@ -211,4 +218,120 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 });
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken };
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+
+  validateChangePasswordBody(oldPassword, newPassword);
+
+  const user = await User.findById(req.user?._id);
+
+  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+
+  if (!isPasswordCorrect) {
+    throw new ApiError(400, "Invalid old password");
+  }
+
+  user.password = newPassword;
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password changed successfully"));
+});
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+  return res
+    .status(200)
+    .json(new ApiResponse(200, req.user, "Current user fetched successfully"));
+});
+
+const updateProfileDetails = asyncHandler(async (req, res) => {
+  const { email, fullname } = req.body;
+
+  validateUpdateUserBody(email, fullname);
+
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        fullname,
+        email,
+      },
+    },
+    { new: true }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Profile details updated successfully"));
+});
+
+const updateUserAvatar = asyncHandler(async (req, res) => {
+  const avatarLocalPath = req.file?.path;
+
+  if (!avatarLocalPath) {
+    throw new ApiError(400, "Avatar file is missing");
+  }
+
+  const user = await User.findById(req.user?._id).select("-password");
+
+  const avatarPublicId = user?.avatarPublicId;
+
+  await deleteFromCloudinary(avatarPublicId);
+
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+  if (!avatar?.secure_url || avatar?.public_id) {
+    throw new ApiError(400, "Error while uploading avatar file");
+  }
+
+  user.avatar = avatar?.secure_url;
+  user.avatarPublicId = avatar?.public_id;
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Avatar image updated successfully"));
+});
+
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+  const coverImageLocalPath = req.file?.path;
+
+  if (!coverImageLocalPath) {
+    throw new ApiError(400, "Cover image file is missing");
+  }
+
+  const user = await User.findById(req.user?._id).select("-password");
+
+  const coverImagePublicId = user?.coverImagePublicId;
+
+  if (coverImagePublicId !== "") {
+    await deleteFromCloudinary(coverImagePublicId);
+  }
+
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+
+  if (!coverImage?.secure_url || coverImage?.public_id) {
+    throw new ApiError(400, "Error while uploading cover image file");
+  }
+
+  user.coverImage = coverImage?.secure_url;
+  user.coverImagePublicId = coverImage?.public_id;
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Cover image updated successfully"));
+});
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  changeCurrentPassword,
+  getCurrentUser,
+  updateProfileDetails,
+  updateUserAvatar,
+  updateUserCoverImage,
+};
