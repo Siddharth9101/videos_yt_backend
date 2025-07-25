@@ -18,8 +18,12 @@ app.use(cookieParser());
 
 // route imports
 import userRoutes from "./routes/user.route.js";
+import videoRoutes from "./routes/video.route.js";
+import subscriptionRoutes from "./routes/subscription.route.js";
 
 // route declarations
 app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/videos", videoRoutes);
+app.use("/api/v1/subscriptions", subscriptionRoutes);
 
 export { app };

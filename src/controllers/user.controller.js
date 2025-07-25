@@ -14,6 +14,7 @@ import {
 } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import { Video } from "../models/video.model.js";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -174,7 +175,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
   const incomingRefreshToken =
-    req.cookies.refreshToken || req.body.refreshToken;
+    req.cookies?.refreshToken || req.body?.refreshToken;
   if (!incomingRefreshToken) {
     throw new ApiError(401, "Unauthorized");
   }
@@ -194,7 +195,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       throw new ApiError(401, "Refresh token expired or used");
     }
 
-    const { accessToken, refreshToken } = generateAccessAndRefreshTokens(
+    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
       user?._id
     );
 
@@ -280,7 +281,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
 
-  if (!avatar?.secure_url || avatar?.public_id) {
+  if (!avatar?.secure_url || !avatar?.public_id) {
     throw new ApiError(400, "Error while uploading avatar file");
   }
 
@@ -288,7 +289,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   user.avatarPublicId = avatar?.public_id;
   await user.save({ validateBeforeSave: false });
 
-  await deleteFromCloudinary(avatarPublicId);
+  await deleteFromCloudinary(avatarPublicId, "image");
 
   return res
     .status(200)
@@ -308,7 +309,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
-  if (!coverImage?.secure_url || coverImage?.public_id) {
+  if (!coverImage?.secure_url || !coverImage?.public_id) {
     throw new ApiError(400, "Error while uploading cover image file");
   }
 
@@ -317,7 +318,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
   await user.save({ validateBeforeSave: false });
 
   if (coverImagePublicId !== "") {
-    await deleteFromCloudinary(coverImagePublicId);
+    await deleteFromCloudinary(coverImagePublicId, "image");
   }
 
   return res
@@ -384,9 +385,17 @@ const getUserChannelDetails = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Channel does not exist");
   }
 
+  const videos = await Video.find({ owner: channel[0]?._id });
+
   return res
     .status(200)
-    .json(new ApiResponse(200, channel[0], "Channel fetched successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { channel: channel[0], videos },
+        "Channel fetched successfully"
+      )
+    );
 });
 
 const getWatchHistory = asyncHandler(async (req, res) => {

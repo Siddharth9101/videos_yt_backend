@@ -45,3 +45,14 @@ export const validateUpdateUserBody = (email, fullname) => {
     throw new ApiError(400, "Invalid email");
   }
 };
+
+export const validatePostVideoBody = (
+  title,
+  description,
+  videoFile,
+  thumbnailFile
+) => {
+  if (!title || !description || !videoFile || !thumbnailFile) {
+    throw new ApiError(400, "All fields are required");
+  }
+};

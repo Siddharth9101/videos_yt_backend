@@ -35,7 +35,7 @@ const userSchema = new Schema(
     },
     avatarPublicId: {
       // cloudinary image public id to delete image later
-      type: String.fromCharCode,
+      type: String,
       required: [true, "avatar public id is required"],
     },
     coverImage: {
