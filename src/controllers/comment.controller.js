@@ -104,7 +104,6 @@ const addComment = asyncHandler(async (req, res) => {
 });
 
 const updateComment = asyncHandler(async (req, res) => {
-  // TODO: update a comment
   /**
    * get videoId, userId and content
    * validations

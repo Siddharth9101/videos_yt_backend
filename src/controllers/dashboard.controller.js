@@ -10,7 +10,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
   /**
    * get userId
    * validate
-   * get total videos, likes, comments
+   * get total videos, likes
    * return
    *  */
 
@@ -41,7 +41,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
     Like.aggregate([
       {
         $match: {
-          owner: new mongoose.Types.ObjectId(userId),
+          likedBy: new mongoose.Types.ObjectId(userId),
         },
       },
       {
@@ -62,14 +62,14 @@ const getChannelStats = asyncHandler(async (req, res) => {
                 createdAt: 1,
               },
             },
-            {
-              $addFields: {
-                video: {
-                  $first: "$video",
-                },
-              },
-            },
           ],
+        },
+      },
+      {
+        $addFields: {
+          video: {
+            $first: "$video",
+          },
         },
       },
       {
@@ -86,7 +86,6 @@ const getChannelStats = asyncHandler(async (req, res) => {
 });
 
 const getChannelVideos = asyncHandler(async (req, res) => {
-  // TODO: Get all the videos uploaded by the channel
   /**
    * get userId
    * validate
