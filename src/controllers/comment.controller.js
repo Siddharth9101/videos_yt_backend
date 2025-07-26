@@ -86,19 +86,16 @@ const addComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "All fields are required");
   }
 
-  const [user, video] = await Promise.all([
-    User.findById(userId),
-    Video.findById(videoId),
-  ]);
+  const video = await Video.findById(videoId);
 
-  if (!user || !video) {
-    throw new ApiError(404, "User/Video does not exist");
+  if (!video) {
+    throw new ApiError(404, "Video does not exist");
   }
 
   await Comment.create({
     content,
     video: video?._id,
-    owner: user?._id,
+    owner: userId,
   });
 
   return res
@@ -124,16 +121,13 @@ const updateComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "All fields are required");
   }
 
-  const [user, comment] = await Promise.all([
-    User.findById(userId),
-    Comment.findById(commentId),
-  ]);
+  const comment = await Comment.findById(commentId);
 
-  if (!user || !comment) {
-    throw new ApiError(404, "User/Video does not exist");
+  if (!comment) {
+    throw new ApiError(404, "Comment does not exist");
   }
 
-  if (!comment.owner.equals(user._id)) {
+  if (!comment.owner.equals(userId)) {
     throw new ApiError(401, "Unauthorized");
   }
 
@@ -163,16 +157,13 @@ const deleteComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "All fields are required");
   }
 
-  const [user, comment] = await Promise.all([
-    User.findById(userId),
-    Comment.findById(commentId),
-  ]);
+  const comment = await Comment.findById(commentId);
 
-  if (!user || !comment) {
-    throw new ApiError(404, "User/Video does not exist");
+  if (!comment) {
+    throw new ApiError(404, "Comment does not exist");
   }
 
-  if (!comment.owner.equals(user._id)) {
+  if (!comment.owner.equals(userId)) {
     throw new ApiError(401, "Unauthorized");
   }
 
