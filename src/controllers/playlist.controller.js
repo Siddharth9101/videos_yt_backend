@@ -25,7 +25,43 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid userId");
   }
 
-  const playlists = await Playlist.find({ owner: userId });
+  const playlists = await Playlist.aggregate([
+    {
+      $match: {
+        owner: mongoose.Types.ObjectId(userId),
+      },
+    },
+    {
+      $sort: {
+        createdAt: -1,
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "videos",
+        foreignField: "_id",
+        as: "videos",
+        pipeline: [
+          {
+            $match: {
+              isPublished: true,
+            },
+          },
+          {
+            $project: {
+              videoFile: 1,
+              thumbnail: 1,
+              title: 1,
+              duration: 1,
+              views: 1,
+              createdAt: 1,
+            },
+          },
+        ],
+      },
+    },
+  ]);
 
   return res
     .status(200)
@@ -38,11 +74,42 @@ const getPlaylistById = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid playlist id");
   }
 
-  const playlist = await Playlist.findById(playlistId);
+  const playlist = await Playlist.aggregate([
+    {
+      $match: {
+        _id: mongoose.Types.ObjectId(playlistId),
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "videos",
+        foreignField: "_id",
+        as: "videos",
+        pipeline: [
+          {
+            $match: {
+              isPublished: true,
+            },
+          },
+          {
+            $project: {
+              videoFile: 1,
+              thumbnail: 1,
+              title: 1,
+              duration: 1,
+              views: 1,
+              createdAt: 1,
+            },
+          },
+        ],
+      },
+    },
+  ]);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, playlist, "Playlist fetched successfully"));
+    .json(new ApiResponse(200, playlist[0], "Playlist fetched successfully"));
 });
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {

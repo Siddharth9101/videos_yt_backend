@@ -1,4 +1,4 @@
-import mongoose, { connect } from "mongoose";
+import mongoose, { connect, isValidObjectId } from "mongoose";
 import { Comment } from "../models/comment.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -8,19 +8,19 @@ import { Video } from "../models/video.model.js";
 
 const getVideoComments = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  let { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 10 } = req.query;
   // check all fields are present
   // fetch filtered comments where video matches videoId
   // return
 
-  if ([videoId, page, limit].some((field) => field === "")) {
-    throw new ApiError(400, "All fields are required");
-  }
+  if (!isValidObjectId(videoId)) throw new ApiError(400, "Invalid videoId");
 
-  page = parseInt(page);
-  limit = parseInt(limit);
+  const paginateOptions = {
+    page: parseInt(page),
+    limit: parseInt(limit),
+  };
 
-  const comments = await Comment.aggregate([
+  const commentsAgg = Comment.aggregate([
     {
       $match: { video: new mongoose.Types.ObjectId(videoId) },
     },
@@ -56,13 +56,12 @@ const getVideoComments = asyncHandler(async (req, res) => {
         createdAt: 1,
       },
     },
-    {
-      $skip: (page - 1) * limit,
-    },
-    {
-      $limit: limit,
-    },
   ]);
+
+  const comments = await Comment.aggregatePaginate(
+    commentsAgg,
+    paginateOptions
+  );
 
   return res
     .status(200)
