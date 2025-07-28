@@ -8,6 +8,9 @@ import {
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
 import { User } from "../models/user.model.js";
+import { publishVideoSchema } from "../schemas/publishVideo.schema.js";
+import { updateVideoSchema } from "../schemas/updateVideo.schema.js";
+import { zodHandler } from "../utils/zodHandler.js";
 
 const getAllVideos = asyncHandler(async (req, res) => {
   const {
@@ -91,24 +94,18 @@ const getAllVideos = asyncHandler(async (req, res) => {
 });
 
 const publishAVideo = asyncHandler(async (req, res) => {
-  const { title, description } = req.body;
   const userId = req.user?._id;
 
   if (!isValidObjectId(userId)) throw new ApiError(400, "Invalid userid");
 
-  if (!title || !description)
-    throw new ApiError(400, "title & description is required");
-
-  const videoLocalPath =
-    req?.files &&
-    req.files?.videoFile &&
-    req.files.videoFile[0] &&
-    req.files.videoFile[0]?.path;
-  const thumbnailLocalPath =
-    req?.files &&
-    req.files?.thumbnail &&
-    req.files.thumbnail[0] &&
-    req.files.thumbnail[0]?.path;
+  const { title, description } = req.body;
+  zodHandler(publishVideoSchema, {
+    ...req.body,
+    videoFile: req?.files?.videoFile?.[0],
+    thumbnail: req?.files?.thumbnail?.[0],
+  });
+  const videoLocalPath = req?.files?.videoFile?.[0]?.path;
+  const thumbnailLocalPath = req?.files?.thumbnail?.[0]?.path;
 
   if (!videoLocalPath || !thumbnailLocalPath)
     throw new ApiError(400, "video/thumbnail is missing");
@@ -165,9 +162,9 @@ const updateVideo = asyncHandler(async (req, res) => {
   if (!isValidObjectId(videoId) || !isValidObjectId(userId))
     throw new ApiError(400, "Invalid videoId/ userId");
 
+  zodHandler(updateVideoSchema, { ...req.body, thumbnail: req?.file });
+
   const { title, description } = req.body;
-  if (!title || !description)
-    throw new ApiError(400, "Title & Description is required");
 
   const video = await video.findOne({ _id: videoId, owner: userId });
 

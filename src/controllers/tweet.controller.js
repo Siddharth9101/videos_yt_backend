@@ -9,7 +9,10 @@ const createTweet = asyncHandler(async (req, res) => {
   const { content } = req.body;
 
   if (!isValidObjectId(userId)) throw new ApiError(400, "Invalid userid");
-  if (!content) throw new ApiError(400, "name is required");
+
+  if (!content || content?.length < 3) {
+    throw new ApiError(400, "Tweet must be at least 3 characters long");
+  }
 
   const tweet = await Tweet.create({
     owner: userId,
@@ -41,7 +44,9 @@ const updateTweet = asyncHandler(async (req, res) => {
 
   if (!isValidObjectId(userId) || !isValidObjectId(tweetId))
     throw new ApiError(400, "Invalid user/tweet id");
-  if (!content) throw new ApiError(400, "Content is missing");
+  if (!content || content?.length < 3) {
+    throw new ApiError(400, "Tweet must be at least 3 characters long");
+  }
 
   const tweet = await Tweet.findById(tweetId);
 

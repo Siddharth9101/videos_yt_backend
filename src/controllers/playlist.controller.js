@@ -9,7 +9,10 @@ const createPlaylist = asyncHandler(async (req, res) => {
   if (!isValidObjectId(userId)) throw new ApiError(400, "Invalid userId");
 
   const { name } = req.body;
-  if (!name) throw new ApiError(400, "name is required");
+
+  if (!name || name?.length < 3) {
+    throw new ApiError(400, "Playlist name must be at least 3 characters long");
+  }
 
   await Playlist.create({
     name,
@@ -195,6 +198,10 @@ const updatePlaylist = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
   const { name } = req.body;
   const userId = req.user?._id;
+
+  if (!name || name?.length < 3) {
+    throw new ApiError(400, "Playlist name must be at least 3 characters long");
+  }
 
   if (!isValidObjectId(playlistId) || !isValidObjectId(userId)) {
     throw new ApiError(400, "Invalid playlist/video/user id");

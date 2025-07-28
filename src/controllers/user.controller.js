@@ -1,12 +1,16 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { zodHandler } from "../utils/zodHandler.js";
+import { registerSchema } from "../schemas/register.schema.js";
 import {
-  validateRegisterBody,
-  validateLoginBody,
-  validateChangePasswordBody,
-  validateUpdateUserBody,
-} from "../utils/validations.js";
+  loginWithEmailSchema,
+  loginWithUsernameSchema,
+} from "../schemas/login.schema.js";
+import { changePasswordSchema } from "../schemas/changePassword.schema.js";
+import { updateProfileSchema } from "../schemas/updateProfile.schema.js";
+import { updateAvatarSchema } from "../schemas/updateAvatar.schema.js";
+import { updateCoverImageSchema } from "../schemas/updateCoverImage.schema.js";
 import { User } from "../models/user.model.js";
 import {
   deleteFromCloudinary,
@@ -46,15 +50,11 @@ const registerUser = asyncHandler(async (req, res) => {
   // return res
 
   const { username, fullname, email, password } = req.body;
-
-  validateRegisterBody(fullname, username, email, password);
-
-  const existedUser = await User.findOne({
-    $or: [{ username, email }],
+  zodHandler(registerSchema, {
+    ...req.body,
+    avatar: req?.files?.avatar?.[0],
+    coverImage: req?.files?.coverImage?.[0],
   });
-  if (existedUser) {
-    throw new ApiError(409, "User with this email or username already exists");
-  }
 
   const avatarLocalPath = req.files?.avatar[0]?.path;
   let coverImageLocalPath;
@@ -65,14 +65,23 @@ const registerUser = asyncHandler(async (req, res) => {
   ) {
     coverImageLocalPath = req.files.coverImage[0].path;
   }
-  if (!avatarLocalPath) {
-    throw new ApiError(400, "Avatar file is required");
+
+  const existedUser = await User.findOne({
+    $or: [{ username, email }],
+  });
+  if (existedUser) {
+    throw new ApiError(409, "User with this email or username already exists");
   }
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
-  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+  if (coverImageLocalPath) {
+    var coverImage = await uploadOnCloudinary(coverImageLocalPath);
+    if (!coverImage) {
+      throw new ApiError(400, "Error while uploading cover image");
+    }
+  }
   if (!avatar) {
-    throw new ApiError(400, "Avatar file is required");
+    throw new ApiError(400, "Error while uploading avatar");
   }
 
   const user = await User.create({
@@ -107,7 +116,13 @@ const loginUser = asyncHandler(async (req, res) => {
   // send back user with access and refresh token cookies
 
   const { username, email, password } = req.body;
-  validateLoginBody(username, email, password);
+  if (email) {
+    zodHandler(loginWithEmailSchema, { email, password });
+  } else if (username) {
+    zodHandler(loginWithUsernameSchema, { username, password });
+  } else {
+    throw new ApiError("Email or username is required");
+  }
 
   const user = await User.findOne({
     $or: [{ username }, { email }],
@@ -221,9 +236,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 });
 
 const changeCurrentPassword = asyncHandler(async (req, res) => {
-  const { oldPassword, newPassword } = req.body;
-
-  validateChangePasswordBody(oldPassword, newPassword);
+  zodHandler(changePasswordSchema, req.body);
 
   const user = await User.findById(req.user?._id);
 
@@ -248,9 +261,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 });
 
 const updateProfileDetails = asyncHandler(async (req, res) => {
-  const { email, fullname } = req.body;
-
-  validateUpdateUserBody(email, fullname);
+  zodHandler(updateProfileSchema, req.body);
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
@@ -269,6 +280,7 @@ const updateProfileDetails = asyncHandler(async (req, res) => {
 });
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
+  zodHandler(updateAvatarSchema, req?.file);
   const avatarLocalPath = req.file?.path;
 
   if (!avatarLocalPath) {
@@ -297,6 +309,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 });
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
+  zodHandler(updateCoverImageSchema, req?.file);
   const coverImageLocalPath = req.file?.path;
 
   if (!coverImageLocalPath) {
