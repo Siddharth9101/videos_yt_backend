@@ -180,3 +180,12 @@ videotube-backend/
 ## 📝 License
 
 This project is licensed under the MIT License.
+
+---
+
+## 🙏 Acknowledgements
+
+This project was built with guidance and inspiration from the  
+📺 [Chai aur Javascript Backend | Hindi](https://www.youtube.com/playlist?list=PLu71SKxNbfoBGh_8p_NS-ZAh6v7HhYqHW)
+
+Special thanks to **Hitesh Choudhary** for creating such beginner-friendly, production ready and in-depth course.
